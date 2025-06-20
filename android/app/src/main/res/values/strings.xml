@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Ecovoyage</string>
-    <string name="title_activity_main">Ecovoyage</string>
-    <string name="package_name">io.ionic.Ecovoyage</string>
-    <string name="custom_url_scheme">io.ionic.Ecovoyage</string>
-</resources>
