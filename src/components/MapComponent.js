@@ -51,6 +51,7 @@ const speeds = {
 };
 
 const MapComponent = () => {
+  const [busPositions, setBusPositions] = useState([]);
   const [path, setPath] = useState([]);        
   const [autoCenter, setAutoCenter] = useState(true); 
   const startRef = useRef(null);
@@ -78,6 +79,33 @@ const MapComponent = () => {
   const [totalCost, setTotalCost] = useState(0);
   const [totalEmissions, setTotalEmissions] = useState(0);
 
+const fetchBusData = async () => {
+  try {
+    const response = await axios.get('https://transit.land/api/v2/rest/vehicles', {
+      headers: {
+        'Authorization': 'Bearer JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',
+      },
+      params: {
+        vehicle_type: 'bus',
+        lat: mapCenter.lat,
+        lon: mapCenter.lng,
+        r: 10_000  // 10km radius
+      }
+    });
+
+    if (response.data && response.data.vehicles) {
+      const buses = response.data.vehicles.map(vehicle => ({
+        id: vehicle.id,
+        lat: vehicle.location.latitude,
+        lng: vehicle.location.longitude,
+        label: vehicle.route_onestop_id || 'Bus'
+      }));
+      setBusPositions(buses);
+    }
+  } catch (error) {
+    console.error("Error fetching bus positions:", error);
+  }
+};
 
 
 const setLocation = () => {
@@ -223,12 +251,19 @@ const stopLocationTracking = () => {
 
 
   const handleModeSelect = (mode) => {
-    if (emissions && emissions[selectedVehicle]) {
-      setTotalDistance(totalDistance + distance / 1000);
-      setTotalCost(totalCost + costs[selectedVehicle]);
-      setTotalEmissions(totalEmissions + emissions[selectedVehicle]);
-    }
-  };
+  setSelectedVehicle(mode);
+  if (emissions && emissions[selectedVehicle]) {
+    setTotalDistance(totalDistance + distance / 1000);
+    setTotalCost(totalCost + costs[selectedVehicle]);
+    setTotalEmissions(totalEmissions + emissions[selectedVehicle]);
+  }
+
+  // Fetch live buses when mode is bus
+  if (mode === 'bus') {
+    fetchBusData();
+  }
+};
+
 
   return (
     <div>
@@ -366,6 +401,18 @@ const stopLocationTracking = () => {
   zoom={zoom}
   onDragStart={() => setAutoCenter(false)}
 >
+  {busPositions.map(bus => (
+  <Marker
+    key={bus.id}
+    position={{ lat: bus.lat, lng: bus.lng }}
+    label={bus.label}
+    icon={{
+      url: 'http://maps.google.com/mapfiles/ms/icons/bus.png',
+      scaledSize: new window.google.maps.Size(40, 40)
+    }}
+  />
+))}
+
   {isRequestingDirections && start && end && (
   <DirectionsService
     options={{
