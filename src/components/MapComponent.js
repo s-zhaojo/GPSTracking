@@ -53,8 +53,9 @@ const speeds = {
 const MapComponent = () => {
   const [busPositions, setBusPositions] = useState([]);
   const [busRoutePath, setBusRoutePath] = useState([]);
-  const [busRoutes, setBusRoutes] = useState([]);       // For listing route names
-  const [selectedRoute, setSelectedRoute] = useState(null); // Track selected route
+  const [busRoutes, setBusRoutes] = useState([]);       
+  const [selectedRoute, setSelectedRoute] = useState(null); 
+  const [isBusRoutesLoading, setIsBusRoutesLoading] = useState(true);
   const [busStops, setBusStops] = useState([]);
   const [path, setPath] = useState([]);        
   const [autoCenter, setAutoCenter] = useState(true); 
@@ -166,7 +167,7 @@ const fetchBusData = async () => {
   try {
     const response = await axios.get('https://transit.land/api/v2/rest/vehicles', {
       headers: {
-        'Authorization': 'Bearer YOUR_TRANSITLAND_API_KEY',
+        Authorization: 'Bearer YOUR_TRANSITLAND_API_KEY',
       },
       params: {
         vehicle_type: 'bus',
@@ -192,23 +193,25 @@ const fetchBusData = async () => {
 
 
 const fetchNearbyBusRoutes = async () => {
+  setIsBusRoutesLoading(true);
   try {
     const response = await axios.get('https://transit.land/api/v2/rest/routes', {
-  params: {
-    apikey: 'JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',  // 👈 API key goes here
-    lat: mapCenter.lat,
-    lon: mapCenter.lng,
-    r: 10000,
-    vehicle_type: 'bus'
-  },
-});
-
+      params: {
+        apikey: 'JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',
+        lat: mapCenter.lat,
+        lon: mapCenter.lng,
+        r: 10000,
+        vehicle_type: 'bus'
+      },
+    });
 
     if (response.data && response.data.routes) {
       setBusRoutes(response.data.routes);
     }
   } catch (error) {
     console.error("Error fetching bus routes:", error);
+  } finally {
+    setIsBusRoutesLoading(false);
   }
 };
 
@@ -228,6 +231,12 @@ const stopLocationTracking = () => {
   const handleDirectionsResponse = (result, status) => {
     if (status === 'OK') {
       setDirections(result);
+
+      const leg = result.routes[0].legs[0];
+      const midLat = (leg.start_location.lat() + leg.end_location.lat()) / 2;
+      const midLng = (leg.start_location.lng() + leg.end_location.lng()) / 2;
+      setMapCenter({ lat: midLat, lng: midLng }); 
+
       const route = result.routes[0];
       const distInMeters = route.legs[0].distance.value;
       const distInKm = distInMeters / 1000;
@@ -524,6 +533,28 @@ useEffect(() => {
     }}
   />
 ))}
+
+{isBusRoutesLoading ? (
+  <p>Loading bus routes...</p>
+) : busRoutes.length === 0 ? (
+  <p>No nearby bus routes found.</p>
+) : (
+  <ul>
+    {busRoutes.map(route => (
+      <li key={route.onestop_id}>
+        <button
+          className="coolbuttons"
+          onClick={() => {
+            setSelectedRoute(route);
+            fetchRouteDetails(route.onestop_id);
+          }}
+        >
+          {route.name || `Unnamed Route (${route.onestop_id})`}
+        </button>
+      </li>
+    ))}
+  </ul>
+)}
 
 
 
