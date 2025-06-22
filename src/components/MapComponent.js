@@ -51,6 +51,11 @@ const speeds = {
 };
 
 const MapComponent = () => {
+  const [busPositions, setBusPositions] = useState([]);
+  const [busRoutePath, setBusRoutePath] = useState([]);
+  const [busRoutes, setBusRoutes] = useState([]);       // For listing route names
+  const [selectedRoute, setSelectedRoute] = useState(null); // Track selected route
+  const [busStops, setBusStops] = useState([]);
   const [path, setPath] = useState([]);        
   const [autoCenter, setAutoCenter] = useState(true); 
   const startRef = useRef(null);
@@ -77,6 +82,30 @@ const MapComponent = () => {
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
   const [totalEmissions, setTotalEmissions] = useState(0);
+
+const fetchRoutePath = async (routeOnestopId) => {
+  try {
+    const response = await axios.get('https://transit.land/api/v2/rest/route_stop_patterns', {
+      headers: {
+        Authorization: 'Bearer JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',
+      },
+      params: {
+        route_onestop_id: routeOnestopId,
+      },
+    });
+
+    const patterns = response.data.route_stop_patterns;
+    if (patterns && patterns.length > 0) {
+      const geometry = patterns[0].geometry;
+      if (geometry && geometry.coordinates) {
+        const path = geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
+        setBusRoutePath(path);
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching route path:", error);
+  }
+};
 
 
 
@@ -223,12 +252,58 @@ const stopLocationTracking = () => {
 
 
   const handleModeSelect = (mode) => {
-    if (emissions && emissions[selectedVehicle]) {
-      setTotalDistance(totalDistance + distance / 1000);
-      setTotalCost(totalCost + costs[selectedVehicle]);
-      setTotalEmissions(totalEmissions + emissions[selectedVehicle]);
+  setSelectedVehicle(mode);
+  if (emissions && emissions[selectedVehicle]) {
+    setTotalDistance(totalDistance + distance / 1000);
+    setTotalCost(totalCost + costs[selectedVehicle]);
+    setTotalEmissions(totalEmissions + emissions[selectedVehicle]);
+  }
+
+  // Fetch live buses when mode is bus
+  if (mode === 'bus') {
+    fetchBusData();
+  }
+};
+
+const fetchRouteDetails = async (routeOnestopId) => {
+  try {
+    const response = await axios.get('https://transit.land/api/v2/rest/route_stop_patterns', {
+      headers: {
+        Authorization: 'Bearer JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',
+      },
+      params: {
+        route_onestop_id: routeOnestopId,
+      },
+    });
+
+    const patterns = response.data.route_stop_patterns;
+    if (patterns && patterns.length > 0) {
+      const geometry = patterns[0].geometry;
+      if (geometry && geometry.coordinates) {
+        const path = geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
+        setBusRoutePath(path);
+      }
+
+      const stops = patterns[0].stop_points.map(stop => ({
+        id: stop.onestop_id,
+        name: stop.name,
+        position: {
+          lat: stop.geometry.coordinates[1],
+          lng: stop.geometry.coordinates[0],
+        }
+      }));
+      setBusStops(stops);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching route details:", error);
+  }
+};
+
+
+useEffect(() => {
+  fetchNearbyBusRoutes();
+}, [mapCenter]);
+
 
   return (
     <div>
@@ -366,6 +441,43 @@ const stopLocationTracking = () => {
   zoom={zoom}
   onDragStart={() => setAutoCenter(false)}
 >
+  {busPositions.map(bus => (
+  <Marker
+    key={bus.id}
+    position={{ lat: bus.lat, lng: bus.lng }}
+    label={bus.label}
+    onClick={() => fetchRoutePath(bus.label)} // use label = route_onestop_id
+    icon={{
+      url: 'http://maps.google.com/mapfiles/ms/icons/bus.png',
+      scaledSize: new window.google.maps.Size(40, 40)
+    }}
+  />
+))}
+
+{busRoutePath.length > 0 && (
+  <Polyline
+    path={busRoutePath}
+    options={{
+      strokeColor: '#FF5722',
+      strokeWeight: 4,
+      strokeOpacity: 0.7
+    }}
+  />
+)}
+
+{busStops.map(stop => (
+  <Marker
+    key={stop.id}
+    position={stop.position}
+    label={stop.name.length > 10 ? stop.name.slice(0, 10) + '…' : stop.name}
+    icon={{
+      url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+    }}
+  />
+))}
+
+
+
   {isRequestingDirections && start && end && (
   <DirectionsService
     options={{
@@ -491,6 +603,28 @@ const stopLocationTracking = () => {
                   </ul>
                 </div>
 
+<div className="card">
+  <h3>Nearby Bus Routes</h3>
+  {busRoutes.length === 0 ? (
+    <p>Loading bus routes...</p>
+  ) : (
+    <ul>
+      {busRoutes.map(route => (
+        <li key={route.onestop_id}>
+          <button
+            className="coolbuttons"
+            onClick={() => {
+              setSelectedRoute(route);
+              fetchRouteDetails(route.onestop_id);
+            }}
+          >
+            {route.name || `Unnamed Route (${route.onestop_id})`}
+          </button>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
 
 
                 {emissions && costs && durationsByMode && (
