@@ -173,7 +173,7 @@ const fetchBusData = async () => {
         vehicle_type: 'bus',
         lat: mapCenter.lat,
         lon: mapCenter.lng,
-        r: 10_000  // 10km radius
+        r: 10_000 
       }
     });
 
@@ -295,7 +295,6 @@ const stopLocationTracking = () => {
 
  
 
-  // Default land vehicle directions:
   const service = new window.google.maps.DirectionsService();
   service.route(
     {
