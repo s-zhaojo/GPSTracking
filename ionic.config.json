@@ -1,7 +1,0 @@
-{
-    "name": "Ecovoyage",
-    "integrations": {
-        "capacitor": {}
-    },
-    "type": "react"
-}

@@ -1,8 +1,0 @@
-{
-  "appId": "io.ionic.Ecovoyage",
-  "appName": "Ecovoyage",
-  "bundleWebRuntime": false,
-  "npmClient": "npm",
-  "webDir": "build",
-  "cordova": {}
-}
