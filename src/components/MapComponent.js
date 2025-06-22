@@ -162,6 +162,56 @@ const getBestTransportTips = () => {
   };
 };
 
+const fetchBusData = async () => {
+  try {
+    const response = await axios.get('https://transit.land/api/v2/rest/vehicles', {
+      headers: {
+        'Authorization': 'Bearer YOUR_TRANSITLAND_API_KEY',
+      },
+      params: {
+        vehicle_type: 'bus',
+        lat: mapCenter.lat,
+        lon: mapCenter.lng,
+        r: 10_000  // 10km radius
+      }
+    });
+
+    if (response.data && response.data.vehicles) {
+      const buses = response.data.vehicles.map(vehicle => ({
+        id: vehicle.id,
+        lat: vehicle.location.latitude,
+        lng: vehicle.location.longitude,
+        label: vehicle.route_onestop_id || 'Bus'
+      }));
+      setBusPositions(buses);
+    }
+  } catch (error) {
+    console.error("Error fetching bus positions:", error);
+  }
+};
+
+
+const fetchNearbyBusRoutes = async () => {
+  try {
+    const response = await axios.get('https://transit.land/api/v2/rest/routes', {
+      headers: {
+        Authorization: 'Bearer JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',
+      },
+      params: {
+        lat: mapCenter.lat,
+        lon: mapCenter.lng,
+        r: 10000, // 10 km
+        vehicle_type: 'bus'
+      },
+    });
+
+    if (response.data && response.data.routes) {
+      setBusRoutes(response.data.routes);
+    }
+  } catch (error) {
+    console.error("Error fetching bus routes:", error);
+  }
+};
 
 
 const stopLocationTracking = () => {
