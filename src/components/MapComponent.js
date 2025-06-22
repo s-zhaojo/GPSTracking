@@ -194,16 +194,15 @@ const fetchBusData = async () => {
 const fetchNearbyBusRoutes = async () => {
   try {
     const response = await axios.get('https://transit.land/api/v2/rest/routes', {
-      headers: {
-        Authorization: 'Bearer JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',
-      },
-      params: {
-        lat: mapCenter.lat,
-        lon: mapCenter.lng,
-        r: 10000, // 10 km
-        vehicle_type: 'bus'
-      },
-    });
+  params: {
+    apikey: 'JaXKtHegwq0d5Y5C1h9X74OlusaAxNnD',  // 👈 API key goes here
+    lat: mapCenter.lat,
+    lon: mapCenter.lng,
+    r: 10000,
+    vehicle_type: 'bus'
+  },
+});
+
 
     if (response.data && response.data.routes) {
       setBusRoutes(response.data.routes);
