@@ -668,11 +668,7 @@ useEffect(() => {
                     ))}
                   </ul>
                 </div>
-                
-                <div className="card">
-  <h3>Airplane Flight Duration</h3>
-  <p>{flightTime || "Please enter a flight number to see the flight time."}</p>
-</div>
+
 
                 <div className="card">
                   <h3>Select Mode of Transport</h3>
