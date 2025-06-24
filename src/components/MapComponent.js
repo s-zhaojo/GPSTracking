@@ -686,7 +686,7 @@ useEffect(() => {
 <div className="card">
   <h3>Nearby Bus Routes</h3>
   {busRoutes.length === 0 ? (
-    <p>Loading bus routes...</p>
+    <p></p>
   ) : (
     <ul>
       {busRoutes.map(route => (
