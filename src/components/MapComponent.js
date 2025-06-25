@@ -291,19 +291,81 @@ const stopLocationTracking = () => {
   setCosts(null);
   setDurationsByMode(null);
 
-  const geocoder = new window.google.maps.Geocoder();
+  const startPlace = startRef.current?.getAttribute('data-coords');
+  const endPlace = endRef.current?.getAttribute('data-coords');
 
- 
+  if (selectedVehicle === 'airplane') {
+    // User must have selected coordinates via Autocomplete
+    if (!startPlace || !endPlace) {
+      alert("Please select both start and end locations from suggestions.");
+      setIsRequestingDirections(false);
+      return;
+    }
 
-  const service = new window.google.maps.DirectionsService();
-  service.route(
-    {
-      origin: start,
-      destination: end,
-      travelMode: 'DRIVING',
-    },
-    handleDirectionsResponse
-  );
+    const [startLat, startLng] = startPlace.split(',').map(Number);
+    const [endLat, endLng] = endPlace.split(',').map(Number);
+
+    const startCoords = new window.google.maps.LatLng(startLat, startLng);
+    const endCoords = new window.google.maps.LatLng(endLat, endLng);
+
+    const distInKm = window.google.maps.geometry.spherical.computeDistanceBetween(startCoords, endCoords) / 1000;
+    const distInMiles = distInKm * 0.621371;
+
+    const modeEmissions = {
+      car: distInMiles * carbonEmissions.car,
+      truck: distInMiles * carbonEmissions.truck,
+      bus: distInMiles * carbonEmissions.bus,
+      motorcycle: distInMiles * carbonEmissions.motorcycle,
+      airplane: distInMiles * carbonEmissions.airplane,
+    };
+    setEmissions(modeEmissions);
+
+    const modeCosts = {
+      car: distInMiles * transportationCosts.car,
+      truck: distInMiles * transportationCosts.truck,
+      bus: distInMiles * transportationCosts.bus,
+      motorcycle: distInMiles * transportationCosts.motorcycle,
+      airplane: distInMiles * transportationCosts.airplane,
+    };
+    setCosts(modeCosts);
+
+    const modeDurations = {};
+    Object.keys(speeds).forEach((mode) => {
+      const speed = speeds[mode];
+      const durationInHours = distInMiles / speed;
+      const hours = Math.floor(durationInHours);
+      const minutes = Math.round((durationInHours - hours) * 60);
+      modeDurations[mode] = `${hours}h ${minutes}m`;
+    });
+    setDurationsByMode(modeDurations);
+
+    setDistance(distInKm * 1000);
+    setMapCenter({
+      lat: (startLat + endLat) / 2,
+      lng: (startLng + endLng) / 2
+    });
+
+    // Draw path manually
+    setDirections({
+      airplanePath: [
+        { lat: startLat, lng: startLng },
+        { lat: endLat, lng: endLng },
+      ]
+    });
+
+  } else {
+    const service = new window.google.maps.DirectionsService();
+    service.route(
+      {
+        origin: start,
+        destination: end,
+        travelMode: 'DRIVING',
+      },
+      handleDirectionsResponse
+    );
+  }
+
+  setIsRequestingDirections(false);
 };
 
 
@@ -465,36 +527,31 @@ useEffect(() => {
   googleMapsApiKey={GOOGLE_MAPS_API_KEY}
   libraries={['places', 'geometry']}
   onLoad={() => {
-    if (startRef.current && endRef.current && window.google) {
-      const autocompleteStart = new window.google.maps.places.Autocomplete(startRef.current, {
-        types: ['geocode', 'establishment'],
-        locationBias: {
-    radius: 5000000000, 
-    center: { lat: 47.6062, lng: -122.3321 } 
-  }
-      });
-      autocompleteStart.addListener('place_changed', () => {
-        const place = autocompleteStart.getPlace();
-        if (place.formatted_address) {
-          setStart(place.formatted_address);
-        } else {
-          setStart(place.name || '');
-        }
-      });
+  if (startRef.current && endRef.current && window.google) {
+    const autocompleteStart = new window.google.maps.places.Autocomplete(startRef.current);
+    autocompleteStart.addListener('place_changed', () => {
+      const place = autocompleteStart.getPlace();
+      if (place.geometry) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        startRef.current.setAttribute('data-coords', `${lat},${lng}`);
+        setStart(place.formatted_address || place.name || '');
+      }
+    });
 
-      const autocompleteEnd = new window.google.maps.places.Autocomplete(endRef.current, {
-        types: ['geocode', 'establishment'],
-      });
-      autocompleteEnd.addListener('place_changed', () => {
-        const place = autocompleteEnd.getPlace();
-        if (place.formatted_address) {
-          setEnd(place.formatted_address);
-        } else {
-          setEnd(place.name || '');
-        }
-      });
-    }
-  }}
+    const autocompleteEnd = new window.google.maps.places.Autocomplete(endRef.current);
+    autocompleteEnd.addListener('place_changed', () => {
+      const place = autocompleteEnd.getPlace();
+      if (place.geometry) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        endRef.current.setAttribute('data-coords', `${lat},${lng}`);
+        setEnd(place.formatted_address || place.name || '');
+      }
+    });
+  }
+}}
+
 >
 
               <GoogleMap
@@ -523,6 +580,25 @@ useEffect(() => {
       strokeColor: '#FF5722',
       strokeWeight: 4,
       strokeOpacity: 0.7
+    }}
+  />
+)}
+
+{directions?.airplanePath && selectedVehicle === 'airplane' && (
+  <Polyline
+    path={directions.airplanePath}
+    options={{
+      strokeColor: '#0000FF',
+      strokeOpacity: 0.7,
+      strokeWeight: 4,
+      icons: [
+        {
+          icon: {
+            path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          },
+          offset: '100%',
+        },
+      ],
     }}
   />
 )}
