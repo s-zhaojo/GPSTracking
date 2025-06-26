@@ -372,17 +372,18 @@ const stopLocationTracking = () => {
 
   const handleModeSelect = (mode) => {
   setSelectedVehicle(mode);
-  if (emissions && emissions[selectedVehicle]) {
-    setTotalDistance(totalDistance + distance / 1000);
-    setTotalCost(totalCost + costs[selectedVehicle]);
-    setTotalEmissions(totalEmissions + emissions[selectedVehicle]);
+
+  if (emissions && costs && distance && emissions[mode] && costs[mode]) {
+    setTotalDistance(prev => prev + distance / 1000);
+    setTotalCost(prev => prev + costs[mode]);
+    setTotalEmissions(prev => prev + emissions[mode]);
   }
 
-  // Fetch live buses when mode is bus
   if (mode === 'bus') {
     fetchBusData();
   }
 };
+
 
 const fetchRouteDetails = async (routeOnestopId) => {
   try {
