@@ -420,13 +420,21 @@ const fetchRouteDetails = async (routeOnestopId) => {
 };
 
 useEffect(() => {
-  let interval;
-  if (selectedVehicle === 'bus') {
-    fetchBusData(); // Initial call
-    interval = setInterval(fetchBusData, 30000); // Refresh every 30 seconds
+  if (
+    distance != null &&
+    costs != null &&
+    emissions != null &&
+    selectedVehicle &&
+    !isNaN(distance) &&
+    costs[selectedVehicle] != null &&
+    emissions[selectedVehicle] != null
+  ) {
+    setTotalDistance(prev => prev + distance / 1000);
+    setTotalCost(prev => prev + costs[selectedVehicle]);
+    setTotalEmissions(prev => prev + emissions[selectedVehicle]);
   }
-  return () => clearInterval(interval); // Cleanup
-}, [selectedVehicle, mapCenter]);
+}, [distance, costs, emissions, selectedVehicle]);
+
 
 
 
